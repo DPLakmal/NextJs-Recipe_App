@@ -1,10 +1,13 @@
-import { useRouter } from "next/router";
 import { useState } from "react";
-import { sanityClient, urlFor, usePreviewSubscription,PortableText  } from "../../lib/sanity";
+import {
+  sanityClient,
+  urlFor,
+  usePreviewSubscription,
+  PortableText,
+} from "../../lib/sanity";
 
-
-const recipesQuery = `*[_type == "recipe" && slug.current == $slug][0]{
-    _id,
+const recipeQuery = `*[_type == "recipe" && slug.current == $slug][0]{
+      _id,
       name,
       slug,
       mainImage,
@@ -14,119 +17,83 @@ const recipesQuery = `*[_type == "recipe" && slug.current == $slug][0]{
         wholeNumber,
         fraction,
         ingredient->{
-            name
+          name
         }
       },
       instructions,
-      likes     
+      likes
     }`;
 
-export default function OneRecipe({ data ,preview}) {
-    const [likes, setLikes] = useState(data?.recipe?.likes);
-const router = useRouter();
-// if (router.isFallback){
-//     return <div>Loading...</div>
-// }
-
-
-
-const {data :recipe } = usePreviewSubscription(recipesQuery,{
-    params:{slug:data.recipe?.slug.current},
+export default function OneRecipe({ data, preview }) {
+  if (!data) return <div>Loading...</div>;
+  const { data: recipe } = usePreviewSubscription(recipeQuery, {
+    params: { slug: data.recipe?.slug.current },
     initialData: data,
-    enabled: preview  && data.recipe?.slug,
-});
-if (!router.isFallback && !data.recipe?.slug) {
-    return <div>Loading...</div>
-  }
-  
+    enabled: preview,
+  });
 
-    const addLike = async () => {
-      const res = await fetch("/api/handle-like", {
-        method: "POST",
-        body: JSON.stringify({ _id: recipe._id }),
-      }).catch((error) => console.log(error));
-  
-      const data = await res.json();
-  
-      setLikes(data.likes);
-    };
-  
-    return (
-        <article className="recipe">
-            <h1>{recipe?.name}</h1>
+  const [likes, setLikes] = useState(data?.recipe?.likes);
 
+  const addLike = async () => {
+    const res = await fetch("/api/handle-like", {
+      method: "POST",
+      body: JSON.stringify({ _id: recipe._id }),
+    }).catch((error) => console.log(error));
 
-            <button className="like-button" onClick={addLike}>
-                {likes} ❤️️ 
-            </button>
-            <main className="content">
-            {recipe.mainImage && (
+    const data = await res.json();
 
-                <img src={urlFor(recipe?.mainImage).url()} alt={recipe.name} />
-            )}
-                <div className="breakdown">
-               
-                    <ul className="ingredients">
-                    <h4>Ingredients</h4>
-                        {recipe.ingredient?.map((ingredient) => (
-                            <li key={ingredient._key} className="ingredient">
-                                {ingredient?.wholeNumber}{" "}
-                                {ingredient?.fraction}
-                                {ingredient?.unit}
-                               
-                                <br />
-                                {ingredient?.ingredient?.name}
+    setLikes(data.likes);
+  };
+  return (
+    <article className="recipe">
+      <h1>{recipe.name}</h1>
 
+      <button className="like-button" onClick={addLike}>
+        {likes} ❤️
+      </button>
 
-                            </li>
-                        ))}
-                        
-                    </ul>
-                    <ul className="ingredient-card">
-                    <h4>Preparation</h4>
-                    <li>
- <PortableText value={recipe?.instructions} className="instructions"/>
-
-                    </li>
-                   
-                    </ul>
-                 
-                 
-                   
-                </div>
-            </main>
-        </article>
-    )
-
+      <main className="content">
+     
+    
+        <img src={urlFor(data?.recipe.mainImage).url()} alt={recipe.name} />
+        
+        <div className="breakdown">
+          <ul className="ingredients">
+            {recipe.ingredient?.map((ingredient) => (
+              <li key={ingredient._key} className="ingredient">
+                {ingredient?.wholeNumber}
+                {ingredient?.fraction} 
+                {ingredient?.unit}
+                <br />
+                {ingredient?.ingredient?.name}
+              </li>
+            ))}
+          </ul>
+          <PortableText value={recipe?.instructions} className="instructions"/>
+        </div>
+        
+      </main>
+    </article>
+  );
 }
 
 export async function getStaticPaths() {
-    const paths = await sanityClient.fetch(
-        `*[_type =="recipe" && defined(slug.current)]{
-            "params":{
-                "slug": slug.current
-            }
-        }`
-    );
-    return {
-        paths,
-        fallback: true,
+  const paths = await sanityClient.fetch(
+    `*[_type == "recipe" && defined(slug.current)]{
+      "params": {
+        "slug": slug.current
+      }
+    }`
+  );
 
-    }
-
-
+  return {
+    paths,
+    fallback: true,
+  };
 }
+
 export async function getStaticProps({ params }) {
-    const { slug } = params;
-    const recipe = await sanityClient.fetch(recipesQuery, { slug });
-    return {
-        props: {
-            data: {
-                recipe,
-
-            },
-            preview:true,
-        }
-    };
-
+  const { slug } = params;
+  const recipe = await sanityClient.fetch(recipeQuery, { slug });
+  return { props: { data: { recipe }, preview: true } };
 }
