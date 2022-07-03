@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import Link from 'next/Link';
+import Link from 'next/link';
 
 import { sanityClient, urlFor } from "../lib/sanity"
 
