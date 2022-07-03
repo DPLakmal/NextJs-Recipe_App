@@ -22,7 +22,7 @@ export default function Home({ recipes }) {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <h1>Welcome to Pub&apos;s Recipes 🥘</h1>
+      <h1>Welcome to Pub&apos;s Recipes</h1>
 
       <ul className='recipes-list'>
       {recipes?.length > 0 &&
